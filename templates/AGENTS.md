@@ -1,8 +1,8 @@
 # Agent Instructions
 
-This repository is for building an agent-first standalone CLI for a humanitarian data API.
+This repository is for building an agent-first standalone CLI for an external API.
 
-Do not implement an MCP server unless explicitly requested. The goal is a shell CLI that agents can call directly.
+Do not implement an MCP server unless explicitly requested. The goal is a shell CLI that agents can call directly, receive stable machine-readable output from, and later wrap in a Skill or MCP layer only if useful.
 
 ## Core Design Rules
 
@@ -18,7 +18,8 @@ Do not implement an MCP server unless explicitly requested. The goal is a shell 
 - Verify current endpoint paths from official docs, OpenAPI/Swagger, API docs, sandbox, or the official repository before hard-coding paths.
 - Provide direct raw endpoint access, such as `tool get <endpoint> --param key=value`.
 - Add workflow commands only when they encode useful retrieval discipline.
-- Preserve provider records as returned; do not aggregate figures unless explicitly designed and documented.
+- Preserve provider records as returned unless normalization is explicitly designed, documented, and tested.
+- Do not aggregate, summarize, or reinterpret provider figures unless an explicit analytical method is designed and documented.
 
 ## Expected CLI Layers
 
@@ -47,6 +48,7 @@ When exploring the API, first answer:
 - What reference metadata exists?
 - Which endpoints should be exposed directly?
 - Which workflows, if any, should be added?
+- What source, citation, provenance, rate-limit, or freshness metadata should be preserved?
 
 ## Implementation Expectations
 
@@ -56,11 +58,12 @@ When exploring the API, first answer:
 - Do not require network access for unit tests.
 - Use fake HTTP transports, mocks, or local test servers for unit tests.
 - Gate live tests behind environment variables.
+- Keep credentials in flags, environment variables, or user config outside the repo.
 - Run the full test suite before claiming completion.
 
 ## Output Contract Preference
 
-Prefer this success envelope unless there is a provider-specific reason to change it:
+Prefer this success envelope unless there is a provider-specific reason to change it. Replace `Provider/API`, `v1`, and endpoint examples with the actual API details:
 
 ```json
 {
