@@ -1,5 +1,5 @@
 .gocache/
-hapi
-dist/
+/hapi
+/dist/
 coverage.out
 .DS_Store
