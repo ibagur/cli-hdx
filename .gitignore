@@ -1,0 +1,5 @@
+.gocache/
+hapi
+dist/
+coverage.out
+.DS_Store
