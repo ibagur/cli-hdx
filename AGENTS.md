@@ -113,9 +113,10 @@ When adding or changing HAPI behavior:
 - Prefer `location_code` over free-text filters once a location is resolved.
 - Preserve HAPI records as returned, except for explicit `--fields` projection.
 - Do not aggregate humanitarian figures unless an explicit analytical method is designed, documented, and tested.
+- Treat ACLED-derived `conflict-events` rows as source records. Do not compute risk scores, total fatalities, or trend classifications in the CLI.
 - Include source metadata fields such as `resource_hdx_id`, `dataset_hdx_stub`, and reference periods when HAPI provides them.
 
-The registry was last verified in this repo against the live official OpenAPI document at `https://hapi.humdata.org/openapi.json` on 2026-05-03. Re-check the official source before making endpoint changes.
+The registry was checked in this repo against the live official OpenAPI document at `https://hapi.humdata.org/openapi.json` on 2026-05-03, and the expanded v2 endpoint names were checked against official HAPI docs and changelog on 2026-05-04. Re-check the official source before making endpoint changes.
 
 ## Configuration Rules
 

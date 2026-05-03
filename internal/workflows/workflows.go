@@ -63,6 +63,16 @@ type HumanitarianNeedsInput struct {
 	AdminLevel int
 }
 
+type ConflictEventsInput struct {
+	Country    string
+	EventType  string
+	StartDate  string
+	EndDate    string
+	AdminLevel int
+	Admin1Name string
+	Admin2Name string
+}
+
 func New(q Queryer, opts Options) *Service {
 	if opts.APIVersion == "" {
 		opts.APIVersion = "v2"
@@ -177,6 +187,62 @@ func (s *Service) HumanitarianNeeds(ctx context.Context, in HumanitarianNeedsInp
 		query.Set("admin_level", strconv.Itoa(in.AdminLevel))
 	}
 	return s.fetch(ctx, "humanitarian_needs", query)
+}
+
+func (s *Service) Refugees(ctx context.Context, in CountryInput) (Result, error) {
+	location, err := s.resolveLocation(ctx, in.Country)
+	if err != nil {
+		return Result{}, err
+	}
+	if _, err := s.checkAvailability(ctx, location.Code, "Refugees & Persons of Concern"); err != nil {
+		return Result{}, err
+	}
+	return s.fetch(ctx, "refugees_persons_of_concern", url.Values{"asylum_location_code": {location.Code}})
+}
+
+func (s *Service) Population(ctx context.Context, in CountryInput) (Result, error) {
+	location, err := s.resolveLocation(ctx, in.Country)
+	if err != nil {
+		return Result{}, err
+	}
+	if _, err := s.checkAvailability(ctx, location.Code, "Baseline Population"); err != nil {
+		return Result{}, err
+	}
+	query := url.Values{"location_code": {location.Code}}
+	if in.AdminLevel > 0 {
+		query.Set("admin_level", strconv.Itoa(in.AdminLevel))
+	}
+	return s.fetch(ctx, "baseline_population", query)
+}
+
+func (s *Service) ConflictEvents(ctx context.Context, in ConflictEventsInput) (Result, error) {
+	location, err := s.resolveLocation(ctx, in.Country)
+	if err != nil {
+		return Result{}, err
+	}
+	if _, err := s.checkAvailability(ctx, location.Code, "conflict-events"); err != nil {
+		return Result{}, err
+	}
+	query := url.Values{"location_code": {location.Code}}
+	if in.EventType != "" {
+		query.Set("event_type", in.EventType)
+	}
+	if in.StartDate != "" {
+		query.Set("start_date", in.StartDate)
+	}
+	if in.EndDate != "" {
+		query.Set("end_date", in.EndDate)
+	}
+	if in.AdminLevel > 0 {
+		query.Set("admin_level", strconv.Itoa(in.AdminLevel))
+	}
+	if in.Admin1Name != "" {
+		query.Set("admin1_name", in.Admin1Name)
+	}
+	if in.Admin2Name != "" {
+		query.Set("admin2_name", in.Admin2Name)
+	}
+	return s.fetch(ctx, "conflict_events", query)
 }
 
 type location struct {

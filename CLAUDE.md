@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build / run
 go run ./cmd/hapi --help
 go build -o hapi ./cmd/hapi
+go run ./cmd/hapi list-endpoints --format table
 
 # Test (no network required)
 go test ./...
@@ -28,18 +29,18 @@ Entry point: `cmd/hapi/main.go` — bootstraps a `cobra.Command` via `cli.NewRoo
 ```
 cli (cobra commands)
   → config.Resolve()       # flags > env > ~/.config/hapi/config.toml > defaults
-  → workflows.Service      # composite queries (country-overview, wash-3w, funding, etc.)
+  → workflows.Service      # composite queries (country-overview, wash-3w, refugees, conflict-events, etc.)
   → client.Client          # HTTP, pagination, format negotiation
   → output (json/jsonl/csv/table)
 ```
 
 **Key packages:**
 
-- `internal/cli` — all cobra commands; `state` struct carries `Options{Stdout, Stderr}` so callers can redirect output.
+- `internal/cli` — all cobra commands; `state` struct carries `Options{Stdout, Stderr, HTTPClient, Env, ConfigPath}` so callers can redirect dependencies.
 - `internal/config` — `Resolve(flags, env, path)` merges config; `HDX_*` env vars are aliases for `HAPI_*`.
 - `internal/workflows` — high-level operations that may call multiple HAPI endpoints (e.g. resolve location → check availability → fetch). Takes a `Queryer` interface — easy to mock in tests.
 - `internal/client` — `Fetch` (JSON, paginated) and `FetchCSV`; `BuildURL` handles versioned paths.
-- `internal/registry` — static map of endpoint keys → versioned URL paths; use `Lookup(version, key)` to resolve.
+- `internal/registry` — static map of endpoint keys → versioned URL paths; use `Lookup(version, key)` to resolve and `List(version)` for endpoint discovery.
 - `internal/output` — `Envelope`/`ErrorEnvelope` structs; `WriteJSON`, `WriteJSONL`, `WriteCSV`, `WriteTable`.
 
 ## Agent Contract
@@ -61,6 +62,8 @@ Exit codes: `0` success · `1` config/usage · `2` bad request · `3` network ·
 
 ## HAPI API Notes
 
-Registry verified against live OpenAPI (`https://hapi.humdata.org/openapi.json`) on 2026-05-03, version `0.9.13`, API v2. Endpoint rename from 2025-02-18 is reflected in the registry.
+Registry verified against live OpenAPI (`https://hapi.humdata.org/openapi.json`) on 2026-05-03, version `0.9.13`, API v2. Expanded v2 endpoint names were checked against official HAPI docs and changelog on 2026-05-04. Endpoint rename from 2025-02-18 is reflected in the registry.
 
 Workflow commands should resolve location via `metadata/location` first, then check `metadata/data-availability` before substantive retrieval. Use `location_code` (e.g. `SDN`) over free-text filters once resolved.
+
+`workflow refugees --country` treats the country as the country of asylum. `workflow conflict-events` returns ACLED-derived records and should not compute risk scores, total fatalities, or trend labels inside the CLI.

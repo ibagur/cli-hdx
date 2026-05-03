@@ -52,11 +52,13 @@ The executable writes a JSON error envelope before exiting non-zero:
 
 Agents should:
 
+- Use `hapi list-endpoints` to discover supported raw endpoint paths.
 - Resolve a country through `hapi metadata locations`.
 - Check `hapi metadata availability` before substantive retrieval.
 - Prefer `location_code` over free-text location filters once resolved.
+- Prefer curated workflows for supported domains, including `wash-3w`, `funding`, `food-security`, `displacement`, `humanitarian-needs`, `refugees`, `population`, and `conflict-events`.
 - Use `--limit`, `--offset`, or `--all-pages` deliberately.
 - Set credentials via environment variables such as `HAPI_APP_IDENTIFIER` or the compatibility alias `HDX_APP_IDENTIFIER`; never write identifiers into project repos.
 - Cite HAPI source metadata fields such as `resource_hdx_id`, `dataset_hdx_stub`, and reference periods when present.
-- Avoid manually aggregating figures unless a separate, explicit analytical method is documented outside this CLI.
+- Avoid manually aggregating figures unless a separate, explicit analytical method is documented outside this CLI. In particular, `conflict-events` returns ACLED-derived event/fatality records and should not be treated as a risk score or summed across administrative levels without an explicit method.
 - Treat table output as human-facing and JSON output as the stable contract.

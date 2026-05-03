@@ -44,8 +44,19 @@ func NewRootCommand(opts Options) *cobra.Command {
 	}
 	s := &state{opts: opts}
 	root := &cobra.Command{
-		Use:           "hapi",
-		Short:         "Agent-first CLI for HDX HAPI",
+		Use:   "hapi",
+		Short: "Agent-first CLI for HDX HAPI",
+		Long: `Agent-first CLI for HDX HAPI.
+
+stdout is data; stderr is diagnostics. JSON output is the stable machine-readable contract.
+
+Exit codes:
+  0  success
+  1  CLI usage or configuration error
+  2  HAPI validation or bad request
+  3  network, timeout, malformed response, or provider unavailable
+  4  no data returned
+  5  partial data with one or more page failures`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
@@ -70,6 +81,7 @@ func NewRootCommand(opts Options) *cobra.Command {
 	root.AddCommand(s.authCommand())
 	root.AddCommand(s.metadataCommand())
 	root.AddCommand(s.getCommand())
+	root.AddCommand(s.listEndpointsCommand())
 	root.AddCommand(s.workflowCommand())
 	return root
 }
@@ -153,7 +165,11 @@ func (s *state) getCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get <endpoint>",
 		Short: "Query any HAPI endpoint path",
-		Args:  cobra.ExactArgs(1),
+		Example: `  hapi get metadata/sector --param name=Water
+  hapi get coordination-context/conflict-events --param location_code=SDN
+  hapi get food-security-nutrition-poverty/food-prices-market-monitor --param location_code=SDN
+  hapi get climate/hazards-rainfall --param location_code=SDN`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := s.resolveConfig(cmd, true)
 			if err != nil {
@@ -171,6 +187,25 @@ func (s *state) getCommand() *cobra.Command {
 	return cmd
 }
 
+func (s *state) listEndpointsCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list-endpoints",
+		Short: "List known HAPI endpoint paths",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := s.resolveConfig(cmd, false)
+			if err != nil {
+				return err
+			}
+			return s.renderResult(cfg, workflows.Result{
+				Endpoint: "registry/endpoints",
+				Query:    url.Values{"api_version": {cfg.APIVersion}},
+				Data:     endpointRows(registry.List(cfg.APIVersion)),
+			}, nil)
+		},
+	}
+	return cmd
+}
+
 func (s *state) workflowCommand() *cobra.Command {
 	cmd := &cobra.Command{Use: "workflow", Short: "Curated humanitarian workflows"}
 	cmd.AddCommand(s.countryOverviewCommand())
@@ -179,6 +214,9 @@ func (s *state) workflowCommand() *cobra.Command {
 	cmd.AddCommand(s.foodSecurityCommand())
 	cmd.AddCommand(s.displacementCommand())
 	cmd.AddCommand(s.humanitarianNeedsCommand())
+	cmd.AddCommand(s.refugeesCommand())
+	cmd.AddCommand(s.populationCommand())
+	cmd.AddCommand(s.conflictEventsCommand())
 	return cmd
 }
 
@@ -302,6 +340,77 @@ func (s *state) humanitarianNeedsCommand() *cobra.Command {
 	cmd.Flags().StringVar(&sector, "sector", "", "Sector name")
 	cmd.Flags().StringVar(&status, "status", "", "Population status")
 	cmd.Flags().IntVar(&adminLevel, "admin-level", 0, "Administrative level")
+	return cmd
+}
+
+func (s *state) refugeesCommand() *cobra.Command {
+	var country string
+	cmd := &cobra.Command{
+		Use:   "refugees",
+		Short: "Resolve asylum country, check availability, and query refugees and persons of concern",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, svc, err := s.workflowService(cmd)
+			if err != nil {
+				return err
+			}
+			result, err := svc.Refugees(cmd.Context(), workflows.CountryInput{Country: country})
+			return s.renderResult(cfg, result, err)
+		},
+	}
+	cmd.Flags().StringVar(&country, "country", "", "Country of asylum")
+	return cmd
+}
+
+func (s *state) populationCommand() *cobra.Command {
+	var country string
+	var adminLevel int
+	cmd := &cobra.Command{
+		Use:   "population",
+		Short: "Resolve country, check availability, and query baseline population",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, svc, err := s.workflowService(cmd)
+			if err != nil {
+				return err
+			}
+			result, err := svc.Population(cmd.Context(), workflows.CountryInput{Country: country, AdminLevel: adminLevel})
+			return s.renderResult(cfg, result, err)
+		},
+	}
+	cmd.Flags().StringVar(&country, "country", "", "Country name")
+	cmd.Flags().IntVar(&adminLevel, "admin-level", 0, "Administrative level")
+	return cmd
+}
+
+func (s *state) conflictEventsCommand() *cobra.Command {
+	var country, eventType, startDate, endDate, admin1Name, admin2Name string
+	var adminLevel int
+	cmd := &cobra.Command{
+		Use:   "conflict-events",
+		Short: "Resolve country, check availability, and query ACLED-derived conflict events",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, svc, err := s.workflowService(cmd)
+			if err != nil {
+				return err
+			}
+			result, err := svc.ConflictEvents(cmd.Context(), workflows.ConflictEventsInput{
+				Country:    country,
+				EventType:  eventType,
+				StartDate:  startDate,
+				EndDate:    endDate,
+				AdminLevel: adminLevel,
+				Admin1Name: admin1Name,
+				Admin2Name: admin2Name,
+			})
+			return s.renderResult(cfg, result, err)
+		},
+	}
+	cmd.Flags().StringVar(&country, "country", "", "Country name")
+	cmd.Flags().StringVar(&eventType, "event-type", "", "ACLED event type category")
+	cmd.Flags().StringVar(&startDate, "start-date", "", "Reference period lower bound, e.g. 2026-01-01")
+	cmd.Flags().StringVar(&endDate, "end-date", "", "Reference period upper bound, e.g. 2026-03-31")
+	cmd.Flags().IntVar(&adminLevel, "admin-level", 0, "Administrative level")
+	cmd.Flags().StringVar(&admin1Name, "admin1-name", "", "Admin 1 name")
+	cmd.Flags().StringVar(&admin2Name, "admin2-name", "", "Admin 2 name")
 	return cmd
 }
 
@@ -440,6 +549,18 @@ func (s *state) hapiClient(cfg config.Config) *client.Client {
 		HTTPClient:    s.opts.HTTPClient,
 		Timeout:       time.Duration(cfg.TimeoutSeconds * float64(time.Second)),
 	})
+}
+
+func endpointRows(endpoints []registry.Endpoint) []map[string]any {
+	rows := make([]map[string]any, 0, len(endpoints))
+	for _, ep := range endpoints {
+		rows = append(rows, map[string]any{
+			"key":         ep.Key,
+			"path":        ep.Path,
+			"description": ep.Description,
+		})
+	}
+	return rows
 }
 
 func parseParams(items []string) (url.Values, error) {
