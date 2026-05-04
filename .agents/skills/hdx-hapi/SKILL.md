@@ -57,7 +57,7 @@ hapi get food-security-nutrition-poverty/food-prices-market-monitor --param loca
 hapi get climate/hazards-rainfall --param location_code=SDN --format json
 ```
 
-5. Preserve returned records. Do not aggregate totals inside the Skill unless a separate methodology is explicitly requested and documented. For `conflict-events`, do not compute risk scores, total fatalities, or trend labels unless the user asks for an analysis and the method is explicit.
+5. Preserve returned records. Do not aggregate totals inside the Skill unless a separate methodology is explicitly requested and documented. For `conflict-events`, present raw per-district records as returned. Do not compute derived metrics (total fatalities, risk scores, trend labels) unless the user explicitly requests an analysis and the methodology is stated.
 
 6. Cite available source fields. Prefer `resource_hdx_id`, `dataset_hdx_stub`, `dataset_hdx_title`, `reference_period_start`, `reference_period_end`, and `hapi_updated_date` when present.
 
@@ -70,6 +70,7 @@ hapi get climate/hazards-rainfall --param location_code=SDN --format json
 - Use `--fields` to reduce token volume.
 - Use `--all-pages` only when the task really needs complete records.
 - `workflow refugees --country` treats the country as country of asylum.
+- For `humanitarian-needs`, omit date filters unless the user requests a specific year — the endpoint returns all available planning cycles and the multi-year trend is analytically valuable.
 - `workflow conflict-events` intentionally does not expose HRP/GHO filters; use raw `hapi get` for those portfolio filters.
 - Exit codes: `0` success; `1` usage/config; `2` HAPI validation/bad request; `3` network/upstream/malformed response; `4` no data; `5` partial data.
 - If a query returns exit code `4`, report that HAPI returned no data for the resolved query rather than inventing a value.
