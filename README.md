@@ -115,11 +115,11 @@ api_version = "v2"
 limit = 1000
 ```
 
-## Installing the Skill for AI Agents
+## Optional AI Agent Skill
 
-The `hdx-hapi` skill tells an AI agent how to use `hapi` to answer humanitarian data questions. Install `hapi` first, then add the skill to your agent platform.
+The `hdx-hapi` skill tells an AI agent how to use `hapi` to answer humanitarian data questions. This is optional helper guidance for agent platforms, not a requirement for installing or using the CLI.
 
-### Claude Code (with Superpowers plugin)
+### Claude Code
 
 Place the skill in your global Claude skills directory so it is available in any project:
 
